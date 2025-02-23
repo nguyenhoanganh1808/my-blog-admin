@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -21,61 +20,67 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Search } from "lucide-react";
 import Link from "next/link";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import axios from "@/lib/axios";
+import { toast } from "sonner";
+import { LoadingSpinner } from "@/components/loading-spinner";
+import { useData } from "@/hooks/useData";
+
+type Author = {
+  id: number;
+  name: string;
+};
 
 type Post = {
-  id: string;
+  id: number;
   title: string;
   published: boolean;
   createdAt: string;
-  comments: number;
+  author: Author;
+  _count: {
+    comments: number;
+  };
 };
 
-// This would come from your API
-const posts: Post[] = [
-  {
-    id: "1",
-    title: "Getting Started with Next.js",
-    published: true,
-    createdAt: "2024-02-22",
-    comments: 5,
-  },
-  {
-    id: "2",
-    title: "Understanding React Server Components",
-    published: false,
-    createdAt: "2024-02-21",
-    comments: 2,
-  },
-];
-
 export default function PostsPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const { user, isLoading } = useAuth();
-  const router = useRouter();
+  const {
+    data: posts,
+    currentPage,
+    fetchData: fetchPosts,
+    isLoading,
+    searchQuery,
+    setSearchQuery,
+    setCurrentPage,
+    totalPages,
+  } = useData<Post>("posts");
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/login");
+  const togglePublish = async (postId: number) => {
+    try {
+      await axios.patch(`/posts/${postId}/toggle-publish`);
+      fetchPosts();
+      toast.success("Success", {
+        description: "Post status updated successfully",
+      });
+    } catch (error) {
+      console.log(error);
+      toast("Error", {
+        description: "Failed to update post status",
+      });
     }
-  }, [user, isLoading, router]);
-
-  if (isLoading) return <p>Loading...</p>;
-  if (!user) return null;
-
-  const filteredPosts = posts.filter((post) =>
-    post.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const togglePublish = async (postId: string) => {
-    // Implement your API call here
-    console.log("Toggle publish for post:", postId);
   };
 
-  const deletePost = async (postId: string) => {
-    // Implement your API call here
-    console.log("Delete post:", postId);
+  const deletePost = async (postId: number) => {
+    try {
+      await axios.delete(`/posts/${postId}`);
+      fetchPosts();
+      toast.success("Success", {
+        description: "Post deleted successfully",
+      });
+    } catch (error) {
+      console.log(error);
+      toast.error("Error", {
+        description: "Failed to delete post",
+      });
+    }
   };
 
   return (
@@ -93,64 +98,98 @@ export default function PostsPage() {
             placeholder="Search posts..."
             className="pl-8"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
       </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Title</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead>Comments</TableHead>
-            <TableHead className="w-[70px]"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredPosts.map((post) => (
-            <TableRow key={post.id}>
-              <TableCell>{post.title}</TableCell>
-              <TableCell>
-                <Button
-                  variant={post.published ? "default" : "secondary"}
-                  size="sm"
-                  onClick={() => togglePublish(post.id)}
-                >
-                  {post.published ? "Published" : "Draft"}
-                </Button>
-              </TableCell>
-              <TableCell>{post.createdAt}</TableCell>
-              <TableCell>{post.comments}</TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                      <span className="sr-only">Actions</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href={`/dashboard/posts/${post.id}/edit`}>
-                        Edit
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-destructive"
-                      onClick={() => deletePost(post.id)}
+      {isLoading ? (
+        <LoadingSpinner />
+      ) : (
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Author</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Comments</TableHead>
+                <TableHead className="w-[70px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {posts.map((post) => (
+                <TableRow key={post.id}>
+                  <TableCell>{post.title}</TableCell>
+                  <TableCell>{post.author.name}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant={post.published ? "default" : "secondary"}
+                      size="sm"
+                      onClick={() => togglePublish(post.id)}
                     >
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                      {post.published ? "Published" : "Draft"}
+                    </Button>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(post.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>{post._count.comments}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Actions</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/posts/${post.id}/edit`}>
+                            Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => deletePost(post.id)}
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <div className="flex items-center justify-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

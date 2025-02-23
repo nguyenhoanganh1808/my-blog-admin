@@ -8,17 +8,17 @@ import { FileText, MessageSquare, PlusCircle } from "lucide-react";
 const items = [
   {
     title: "Posts",
-    href: "/dashboard/posts",
+    href: "/posts",
     icon: FileText,
   },
   {
     title: "Comments",
-    href: "/dashboard/comments",
+    href: "/comments",
     icon: MessageSquare,
   },
   {
     title: "New Post",
-    href: "/dashboard/posts/new",
+    href: "/posts/new",
     icon: PlusCircle,
   },
 ];
