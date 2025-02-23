@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Search } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 type Post = {
   id: string;
@@ -50,6 +52,17 @@ const posts: Post[] = [
 
 export default function PostsPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading) return <p>Loading...</p>;
+  if (!user) return null;
 
   const filteredPosts = posts.filter((post) =>
     post.title.toLowerCase().includes(searchQuery.toLowerCase())
