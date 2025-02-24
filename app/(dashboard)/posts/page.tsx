@@ -30,7 +30,7 @@ type Author = {
   name: string;
 };
 
-type Post = {
+export type Post = {
   id: number;
   title: string;
   published: boolean;
@@ -55,7 +55,7 @@ export default function PostsPage() {
 
   const togglePublish = async (postId: number) => {
     try {
-      await axios.patch(`/posts/${postId}/toggle-publish`);
+      await axios.patch(`/posts/${postId}/publish`);
       fetchPosts();
       toast.success("Success", {
         description: "Post status updated successfully",
@@ -87,7 +87,7 @@ export default function PostsPage() {
     <div className="space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Posts</h2>
-        <Link href="/dashboard/posts/new">
+        <Link href="/posts/new">
           <Button>New Post</Button>
         </Link>
       </div>
@@ -150,9 +150,7 @@ export default function PostsPage() {
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/posts/${post.id}/edit`}>
-                            Edit
-                          </Link>
+                          <Link href={`/posts/${post.id}/edit`}>Edit</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"

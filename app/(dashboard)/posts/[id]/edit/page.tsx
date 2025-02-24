@@ -3,72 +3,99 @@
 import type React from "react";
 import type { Tag } from "@/components/tag-combobox";
 
-import { useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { Editor } from "@tinymce/tinymce-react";
+import dynamic from "next/dynamic";
 import axios from "@/lib/axios";
-import { useRouter } from "next/navigation";
+import { LoadingSpinner } from "@/components/loading-spinner";
 import { Switch } from "@/components/ui/switch";
-import { useAuth } from "@/contexts/AuthContext";
-import { AxiosError } from "axios";
 import { TagCombobox } from "@/components/tag-combobox";
 import { ImageUpload } from "@/components/image-upload";
+import { toast } from "sonner";
+import { handleApiError } from "@/lib/utils";
 
-export interface ErrorResponse {
-  errors?: { msg: string }[];
-  message?: string;
-}
+const Editor = dynamic(
+  () => import("@tinymce/tinymce-react").then((mod) => mod.Editor),
+  { ssr: false }
+);
 
-export default function NewPostPage() {
+export default function EditPostPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [published, setPublished] = useState(false);
+  const [content, setContent] = useState(
+    "<h2>Full-featured rich text editing experience</h2><p>No matter what you're building, TinyMCE has got you covered.</p><p><strong>Kaka</strong></p>"
+  );
   const [coverImage, setCoverImage] = useState("");
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [published, setPublished] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const { user } = useAuth();
+  const { id } = use(params);
+
+  const fetchPost = useCallback(async () => {
+    try {
+      const response = await axios.get(`/posts/${id}`);
+
+      setTitle(response.data.title);
+      setContent(response.data.content);
+      setCoverImage(response.data.coverPhoto);
+      setSelectedTags(response.data.tags);
+      setPublished(response.data.published);
+    } catch (error) {
+      handleApiError(error, "Failed to fetch post");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchPost();
+  }, [fetchPost]);
+
+  useEffect(() => {
+    console.log("Fetched content:", content);
+  }, [content]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    console.log("content: ", content);
+
     try {
-      await axios.post("/posts", {
+      await axios.put(`/posts/${id}`, {
         title,
         content,
         published,
-        authorId: user?.id,
         coverPhoto: coverImage,
         tags: selectedTags.map((tag) => tag.name),
       });
-      console.log("Creating post:", { title, content });
 
       toast.success("Success", {
-        description: "Post created successfully",
+        description: "Post updated successfully",
       });
 
       router.push("/posts");
     } catch (error) {
-      const err = error as AxiosError;
-      let errorMessage = "Failed to create post";
-      const data = err.response?.data as ErrorResponse;
-
-      errorMessage = data.errors?.[0]?.msg || data.message || errorMessage;
-
-      toast.error("Error", {
-        description: errorMessage,
-      });
+      handleApiError(error, "Failed to update post");
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
   return (
     <div className="space-y-6 p-8 pt-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">New Post</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Edit Post</h2>
       </div>
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="space-y-2">
@@ -94,6 +121,7 @@ export default function NewPostPage() {
         <div className="space-y-2">
           <Label htmlFor="content">Content</Label>
           <Editor
+            key={id}
             apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
             value={content}
             onEditorChange={(content) => setContent(content)}
@@ -134,11 +162,11 @@ export default function NewPostPage() {
             checked={published}
             onCheckedChange={setPublished}
           />
-          <Label htmlFor="published">Publish immediately</Label>
+          <Label htmlFor="published">Published</Label>
         </div>
         <div className="flex gap-4">
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Creating..." : "Create Post"}
+            {isLoading ? "Saving..." : "Save Changes"}
           </Button>
           <Button
             type="button"
