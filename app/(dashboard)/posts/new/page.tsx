@@ -143,7 +143,7 @@ export default function NewPostPage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push("/dashboard/posts")}
+            onClick={() => router.push("/posts")}
           >
             Cancel
           </Button>
