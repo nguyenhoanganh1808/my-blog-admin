@@ -3,18 +3,20 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { ImagePlus, X } from "lucide-react";
-import Image from "next/image";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import axios from "@/lib/axios";
-import { toast } from "sonner";
 import { handleApiError } from "@/lib/utils";
+import { toast } from "sonner";
 
-interface ImageUploadProps {
+interface AvatarUploadProps {
   value?: string;
   onChange: (value: string) => void;
+  name: string;
 }
 
-export function ImageUpload({ value, onChange }: ImageUploadProps) {
+export function AvatarUpload({ value, onChange, name }: AvatarUploadProps) {
   const [isUploading, setIsUploading] = React.useState(false);
+
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const handleUpload = async (file: File) => {
@@ -30,10 +32,10 @@ export function ImageUpload({ value, onChange }: ImageUploadProps) {
       });
       onChange(response.data.fileUrl);
       toast.success("Success", {
-        description: "Image uploaded successfully",
+        description: "Avatar uploaded successfully",
       });
     } catch (error) {
-      handleApiError(error, "Failed to upload image");
+      handleApiError(error, "Failed to upload avatar");
     } finally {
       setIsUploading(false);
     }
@@ -42,9 +44,9 @@ export function ImageUpload({ value, onChange }: ImageUploadProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
+      if (file.size > 2 * 1024 * 1024) {
         toast.error("Error", {
-          description: "File size must be less than 5MB",
+          description: "File size must be less than 2MB",
         });
         return;
       }
@@ -53,7 +55,7 @@ export function ImageUpload({ value, onChange }: ImageUploadProps) {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col items-center gap-4">
       <input
         type="file"
         ref={inputRef}
@@ -61,35 +63,31 @@ export function ImageUpload({ value, onChange }: ImageUploadProps) {
         accept="image/*"
         onChange={handleFileChange}
       />
-      {value ? (
-        <div className="relative aspect-video w-full overflow-hidden rounded-lg border">
-          <Image
-            src={value || "/placeholder.svg"}
-            alt="Cover image"
-            fill
-            className="object-cover"
-          />
+      <div className="relative">
+        <Avatar className="h-24 w-24">
+          <AvatarImage src={value} alt={name} />
+          <AvatarFallback>{name[0]?.toUpperCase()}</AvatarFallback>
+        </Avatar>
+        {value && (
           <Button
             size="icon"
             variant="destructive"
-            className="absolute right-2 top-2"
+            className="absolute -right-2 -top-2 h-6 w-6 rounded-full"
             onClick={() => onChange("")}
           >
             <X className="h-4 w-4" />
           </Button>
-        </div>
-      ) : (
-        <Button
-          type="button"
-          variant="outline"
-          className="aspect-video w-full"
-          onClick={() => inputRef.current?.click()}
-          disabled={isUploading}
-        >
-          <ImagePlus className="mr-2 h-4 w-4" />
-          {isUploading ? "Uploading..." : "Upload Cover Image"}
-        </Button>
-      )}
+        )}
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => inputRef.current?.click()}
+        disabled={isUploading}
+      >
+        <ImagePlus className="mr-2 h-4 w-4" />
+        {isUploading ? "Uploading..." : "Change Avatar"}
+      </Button>
     </div>
   );
 }

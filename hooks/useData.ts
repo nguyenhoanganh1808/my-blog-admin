@@ -24,9 +24,9 @@ export function useData<T>(endpoint: string) {
       setData(response.data.data);
       setTotalPages(response.data.pagination.totalPages);
     } catch (error) {
-      console.error("Failed to fetch posts:", error);
+      console.error("Failed to fetch data:", error);
       toast.error("Error", {
-        description: "Failed to fetch posts",
+        description: "Failed to fetch data",
       });
     } finally {
       setIsLoading(false);
