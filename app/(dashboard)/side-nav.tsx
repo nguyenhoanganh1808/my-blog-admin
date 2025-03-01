@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { FileText, MessageSquare, PlusCircle } from "lucide-react";
+import { FileText, MessageSquare, PlusCircle, Tags } from "lucide-react";
 
 const items = [
   {
@@ -15,6 +15,11 @@ const items = [
     title: "Comments",
     href: "/comments",
     icon: MessageSquare,
+  },
+  {
+    title: "Tags",
+    href: "/tags",
+    icon: Tags,
   },
   {
     title: "New Post",
